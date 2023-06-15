@@ -41,42 +41,34 @@ def exibir_menu():
 def busca_largura(grafo, vertice_raiz):
     visitados = set()
     fila = [vertice_raiz]
-    componentes_conexas = []
 
     while fila:
         vertice = fila.pop(0)
         if vertice not in visitados:
             visitados.add(vertice)
-            componente_atual = set()
-            componente_atual.add(vertice)
             fila.extend(vizinho for vizinho, aresta in enumerate(grafo[vertice]) if aresta == 1 and vizinho not in visitados)
-            while fila:
-                proximo_vertice = fila.pop(0)
-                if proximo_vertice not in visitados:
-                    visitados.add(proximo_vertice)
-                    componente_atual.add(proximo_vertice)
-                    fila.extend(vizinho for vizinho, aresta in enumerate(grafo[proximo_vertice]) if aresta == 1 and vizinho not in visitados)
-            componentes_conexas.append(componente_atual)
-    return componentes_conexas
+
+    return len(visitados) == len(grafo)
+
 
 def encontrar_biparticao(grafo, vertice_raiz):
-    visitados = {}
-    fila = [(vertice_raiz, 0)]
-    biparticao = {}
+    visitados = set()
+    fila = [(vertice_raiz, 0)]  # Tupla (vértice, cor)
+    biparticao = {vertice_raiz: 0}  # Dicionário {vértice: cor}
 
     while fila:
-        vertice, nivel = fila.pop(0)
+        vertice, cor = fila.pop(0)
         if vertice not in visitados:
-            visitados[vertice] = nivel
-            fila.extend((vizinho, nivel + 1) for vizinho, aresta in enumerate(grafo[vertice]) if aresta == 1 and vizinho not in visitados)
-    
-    for vertice in visitados:
-        if visitados[vertice] % 2 == 0:
-            biparticao[vertice] = "A"
-        else:
-            biparticao[vertice] = "B"
-    
+            visitados.add(vertice)
+            for vizinho, aresta in enumerate(grafo[vertice]):
+                if aresta == 1:
+                    if vizinho not in biparticao:
+                        biparticao[vizinho] = 1 - cor
+                        fila.append((vizinho, 1 - cor))
+                    elif biparticao[vizinho] == cor:
+                        return None  # Grafo não é bipartido
     return biparticao
+
 
 def encontrar_ciclo_impar(grafo, vertice_raiz):
     visitados = {}
@@ -109,28 +101,43 @@ def main():
         opcao = int(input("Digite o número da opção desejada: "))
 
         if opcao == 1:
-            componentes_conexas = busca_largura(matriz_adjacencia, 0)
-            if len(componentes_conexas) == 1:
+            if busca_largura(matriz_adjacencia, 0):
                 print("SIM, o grafo é conexo.")
             else:
                 print("NÃO, o grafo é desconexo.")
-                for i, componente in enumerate(componentes_conexas):
-                    print(f"Componente Conexa {i+1}: {componente}")
+            componentes_conexas = []
+            vertices_visitados = set()
+            for vertice in range(len(matriz_adjacencia)):
+                if vertice not in vertices_visitados:
+                    componente = set()
+                    if busca_largura(matriz_adjacencia, vertice):
+                        fila = [vertice]
+                        while fila:
+                            v = fila.pop(0)
+                            if v not in componente:
+                                componente.add(v)
+                                fila.extend(vizinho for vizinho, aresta in enumerate(matriz_adjacencia[v]) if aresta == 1 and vizinho not in componente)
+            componentes_conexas.append(componente)
+            vertices_visitados.update(componente)
+            print(f"Componentes Conexas:")
+            for i, componente in enumerate(componentes_conexas):
+                print(f"Componente Conexa {i+1}: {componente}")
         elif opcao == 2:
             vertice_raiz = int(input(f"Qual será o vértice raiz da busca? (0 a {len(matriz_adjacencia)-1}): "))
             componentes_conexas = busca_largura(matriz_adjacencia, vertice_raiz)
             plotar_grafo(matriz_adjacencia)
         elif opcao == 3:
-            vertice_raiz = int(input(f"Qual será o vértice raiz para encontrar a bipartição? (0 a {len(matriz_adjacencia)-1}): "))
+            vertice_raiz = int(input("Qual será o vértice raiz da busca? "))
             biparticao = encontrar_biparticao(matriz_adjacencia, vertice_raiz)
-            if not biparticao:
+            if biparticao is None:
+                print("O grafo não é bipartido.")
                 ciclo_impar = encontrar_ciclo_impar(matriz_adjacencia, vertice_raiz)
-                print("O grafo não é bipartido, segue o ciclo ímpar:")
+                print("Ciclo Ímpar:")
                 print(ciclo_impar)
             else:
-                print("O grafo é bipartido! Veja:")
-                for vertice, grupo in biparticao.items():
-                    print(f"Vértice {vertice}: Grupo {grupo}")
+                print("Bipartição do grafo:")
+                for vertice, cor in biparticao.items():
+                    print(f"Vértice {vertice}: Cor {cor}")
         elif opcao == 0:
             break
         else:
